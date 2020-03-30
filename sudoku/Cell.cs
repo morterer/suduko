@@ -21,7 +21,7 @@ namespace sudoku
 
         public override string ToString()
         {
-            return $"{R},{C}:{String.Join(",", Solutions)}";
+            return $"{R}{C}:{String.Join(",", Solutions)}";
         }
     }
 }

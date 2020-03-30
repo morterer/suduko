@@ -12,11 +12,19 @@ namespace sudoku
     {
         static void Main(string[] args)
         {
-            //const string samplePuzzle = "......9.7...42.18....7.5.261..9.4....5.....4....5.7..992.1.8....34.59...5.7......";
+            const string samplePuzzle = "......9.7...42.18....7.5.261..9.4....5.....4....5.7..992.1.8....34.59...5.7......";
             //const string samplePuzzle = "..3.2.6..9..3.5..1..18.64....81.29..7.......8..67.82....26.95..8..2.3..9..5.1.3..";
             //const string samplePuzzle = "..3.2.6..9..3.5..1..18.64....81.29..7.......8..67.82....26.95..8..2.3..9..5.1.3..";
-            const string samplePuzzle = "3..2........1.7...7.6.3.5...7...9.8.9...2...4.1.8...5...9.4.3.1...7.2........8..6";
-
+            //const string samplePuzzle = "3..2........1.7...7.6.3.5...7...9.8.9...2...4.1.8...5...9.4.3.1...7.2........8..6";
+            //const string samplePuzzle =   "9..8.1.6." +
+            //                              ".......57" +
+            //                              ".51.7...." +
+            //                              "...96.5.." +
+            //                              ".15...794" +
+            //                              "..3......" +
+            //                              "....4.92." +
+            //                              "17......." +
+            //                              ".8.1.6..5";
             // Convenience list used in generating gridBlockList
             List<List<char>> rowGridsList = new List<List<char>>
             {
@@ -63,11 +71,6 @@ namespace sudoku
                 boarkIndex++;
             }
 
-
-            //Cell foundCell = board.Find(cell => cell.R == 'C' && cell.C == 6);
-            //foundCell.Solutions.Add(4);
-            //foundCell.Solutions.Add(5);
-            //foundCell.Solutions.Add(6);
 
             // build a list where each element of the list is a row in the sudoko grid
             List<List<Cell>> allRowsList = new List<List<Cell>>();
@@ -136,33 +139,40 @@ namespace sudoku
                 boardDictionary.Add(cell, new List<Cell>(peerCells));
             }
 
-
+            bool eliminate = true;
+            bool ruleOut = true;
+            bool nakedTwins = true;
             DisplayBoard(board);
-            while (Eliminate(boardDictionary))
+
+            while (eliminate || ruleOut || nakedTwins)
             {
-                Console.WriteLine();
-                DisplayBoard(board);
-                Console.WriteLine("Done with Eliminate");
+                // while Eliminate keeps making changes
+                while (eliminate)
+                {
+                    eliminate = Eliminate(boardDictionary);
+                    Console.WriteLine();
+                    DisplayBoard(board);
+                    Console.WriteLine("Done with Eliminate");
+                }
+
+                // while RuleOut keeps making changes
+                while (ruleOut)
+                {
+                    ruleOut = RuleOut(boardDictionary);
+                    Console.WriteLine();
+                    DisplayBoard(board);
+                    Console.WriteLine("Done with RuleOut");
+                }
+
+                // while NakedTwins keeps making changes
+                while (nakedTwins)
+                {
+                    nakedTwins = NakedTwins(superList);
+                    Console.WriteLine();
+                    DisplayBoard(board);
+                    Console.WriteLine("Done with NakedTwins");
+                }
             }
-
-            while (RuleOut(boardDictionary))
-            {
-                Console.WriteLine();
-                DisplayBoard(board);
-                Console.WriteLine("Done with RuleOut");
-            }
-
-
-
-            //foreach (var cell in board)
-            //{
-            //    Console.Write($"{cell}| ");
-            //}
-
-            //Console.WriteLine(board.Count);
-
-            //Cell foundCell = board.Find(cell => cell.R == 6 && cell.C == 3);
-            //Console.WriteLine($"Found {foundCell}");
         }
 
         private static void DisplayBoard(List<Cell> board)
@@ -194,28 +204,6 @@ namespace sudoku
                     Console.WriteLine(new String('-', (size * 9) + 3));
                 }
             }
-            //for (int i = 0; i < board.Count; i++)
-            //{
-            //    IList<int> solutions = board[i].Solutions;
-            //    string text = solutions.Count == 0 ? "." : String.Join("", solutions);
-
-            //    Console.Write(text.PadLeft(size));
-
-            //    //if (i % 2 == 0)
-            //    //{
-            //    //    Console.Write(" | ");
-            //    //}
-
-            //    // if at the end of a row, then start a new row
-            //    if ((i % 8 == 0) && (i != 0))
-            //    {
-            //        Console.WriteLine();
-            //    }
-            //}
-
-
-            // a textual format used to specify the initial state of a puzzle; we will reserve the name -=grid=- for this.
-            // an internal representation of any state of a puzzle, partially solved or complete; this we will call a -=values=- collection
         }
         private static bool Eliminate(Dictionary<Cell, List<Cell>> boardDictionary)
         {
@@ -265,6 +253,63 @@ namespace sudoku
                         }
                     }
 
+                }
+            }
+            return changesMade;
+        }
+
+        private static bool NakedTwins(List<List<Cell>> board)
+        {
+            bool changesMade = false;
+            // start by looking for twins
+            // iterate over all the rows, columns, blocks on the board
+            foreach (var list in board)
+            {
+                //Console.WriteLine("Checking List {0}", String.Join(", ", list));
+
+                //var groupBySolution = list.GroupBy(x => x.Solutions, new SolutionsComparer());
+
+                //var duplicates = groupBySolution.Where(item => item.Count() > 1);
+
+                //Console.WriteLine("Duplicates {0}\n\n", String.Join(" ", duplicates));
+
+
+                var distinct = list.Distinct(new SolutionsComparer());
+                var dups = list.Except(distinct).Where(x => x.Solutions.Count == 2);
+                //Console.WriteLine("Original {0}", String.Join(" ", list));
+                //Console.WriteLine("Distinct {0}", String.Join(" ", distinct));
+                //Console.WriteLine("Duplicates {0}\n\n", String.Join(" ", dups));
+
+                // This works but only removes one duplicate item from the list, not all
+                // duplicate items.  Notice the distinct line still has a cell with Solutions 2,8
+
+                // Original C,0:7 C,1:2,8 C,2:6 C,3:9 C,4:3 C,5:4 C,6:5 C,7:1,2 C,8:2,8
+                // Distinct C,0:7 C,1:2,8 C,2:6 C,3:9 C,4:3 C,5:4 C,6:5 C,7:1,2
+                // Duplicates C,8:2,8
+
+                // find all cells that aren't part of a 'naked twin' and remove the twin's values from those cells
+                foreach (var dupCell in dups)
+                {
+                    // Is there a way to reuse the SolutionsComparer
+                    var moarDistince = list.FindAll(x => !x.Solutions.All(dupCell.Solutions.Contains));
+                    //Console.WriteLine("\tShouldn't be any {0}", dupCell);
+                    //Console.WriteLine("\tMoar Distinct {0}", String.Join(" ", moarDistince));
+
+                    // so moarDistince shouldn't have ANY cells with the same solutions as dupCell
+                    // iterate over moarDistince removing anything in dupCell from each element
+
+                    foreach (var cell in moarDistince)
+                    {
+                        int startSize = cell.Solutions.Count;
+                        cell.Solutions = cell.Solutions.Except(dupCell.Solutions).ToList();
+
+                        // hopefully the number only goes down!
+                        if (cell.Solutions.Count < startSize)
+                        {
+                            //Console.WriteLine("{0} removed from {1}", String.Join(",", dupCell.Solutions), cell);
+                            changesMade = true;
+                        }
+                    }
                 }
             }
             return changesMade;
