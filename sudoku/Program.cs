@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.Serialization.Formatters;
-using System.Text;
-using System.Threading.Tasks;
+using System.Net.Sockets;
 
 namespace sudoku
 {
@@ -12,19 +9,12 @@ namespace sudoku
     {
         static void Main(string[] args)
         {
-            const string samplePuzzle = "......9.7...42.18....7.5.261..9.4....5.....4....5.7..992.1.8....34.59...5.7......";
-            //const string samplePuzzle = "..3.2.6..9..3.5..1..18.64....81.29..7.......8..67.82....26.95..8..2.3..9..5.1.3..";
-            //const string samplePuzzle = "..3.2.6..9..3.5..1..18.64....81.29..7.......8..67.82....26.95..8..2.3..9..5.1.3..";
-            //const string samplePuzzle = "3..2........1.7...7.6.3.5...7...9.8.9...2...4.1.8...5...9.4.3.1...7.2........8..6";
-            //const string samplePuzzle =   "9..8.1.6." +
-            //                              ".......57" +
-            //                              ".51.7...." +
-            //                              "...96.5.." +
-            //                              ".15...794" +
-            //                              "..3......" +
-            //                              "....4.92." +
-            //                              "17......." +
-            //                              ".8.1.6..5";
+            //const string samplePuzzle = "000000907000420180000705026100904000050000040000507009920108000034059000507000000";
+            //const string samplePuzzle = "003020600900305001001806400008102900700000008006708200002609500800203009005010300";
+            //const string samplePuzzle = "003020600900305001001806400008102900700000008006708200002609500800203009005010300";
+            const string samplePuzzle = "300200000000107000706030500070009080900020004010800050009040301000702000000008006";
+            //const string samplePuzzle = "900801060000000057051070000000960500015000794003000000000040920170000000080106005";
+
             // Convenience list used in generating gridBlockList
             List<List<char>> rowGridsList = new List<List<char>>
             {
@@ -58,7 +48,7 @@ namespace sudoku
             int boarkIndex = 0;
             foreach (char chr in samplePuzzle)
             {
-                if (chr != '.')
+                if (chr != '0')
                 {
                     // convert the character to an int e.g. '2' -> 2
                     board[boarkIndex].Solutions.Add((int)Char.GetNumericValue(chr));
@@ -162,6 +152,8 @@ namespace sudoku
                     Console.WriteLine();
                     DisplayBoard(board);
                     Console.WriteLine("Done with RuleOut");
+                    // if RuleOut changed something, run Eliminate again
+                    eliminate = true;
                 }
 
                 // while NakedTwins keeps making changes
@@ -171,6 +163,9 @@ namespace sudoku
                     Console.WriteLine();
                     DisplayBoard(board);
                     Console.WriteLine("Done with NakedTwins");
+                    // if NakedTwins changed something, run Eliminate and RuleOut again
+                    eliminate = true;
+                    ruleOut = true;
                 }
             }
         }
@@ -314,5 +309,7 @@ namespace sudoku
             }
             return changesMade;
         }
+
+
     }
 }
