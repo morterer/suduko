@@ -8,7 +8,7 @@ namespace sudoku
 {
     class Program
     {
-        // Convenience list used in generating gridBlockList
+        // Convenience list used in generating blocks
         static readonly List<List<char>> RowGridsList = new List<List<char>>
         {
             new List<char> {'A', 'B', 'C'},
@@ -16,7 +16,7 @@ namespace sudoku
             new List<char> {'G', 'H', 'I'}
         };
 
-        // Convenience list used in generating gridBlockList
+        // Convenience list used in generating blocks
         static readonly List<List<int>> ColumnGridsList = new List<List<int>>
         {
             new List<int> {0, 1, 2},
@@ -25,40 +25,6 @@ namespace sudoku
         };
 
         private static readonly List<char> Alphabet = new List<char> {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'};
-
-        // assumes the board has 81 elements, and the string has 81 characters
-        static List<Cell> CreateBoard(String unsolvedBoard)
-        {
-            var board = new List<Cell>();
-            // create each cell in the board, A0, A1, A2...I8
-
-            using (var charEnumerator = unsolvedBoard.GetEnumerator())
-            {
-                foreach (var r in Alphabet)
-                {
-                    for (int c = 0; c < 9; c++)
-                    {
-                        var cell = new Cell(r, c);
-                        charEnumerator.MoveNext();
-                        int number = (int) char.GetNumericValue(charEnumerator.Current);
-                        // if the number is 0, assume the solution is unknown and default to all possible solutions
-                        if (number == 0)
-                        {
-                            cell.Solutions = new List<int> {1, 2, 3, 4, 5, 6, 7, 8, 9};
-                        }
-                        else
-                            // assume number is the solution for the current cell
-                        {
-                            cell.Solutions.Add(number);
-                        }
-
-                        board.Add(cell);
-                    }
-                }
-            }
-
-            return board;
-        }
 
         static void Main(string[] args)
         {
@@ -69,13 +35,6 @@ namespace sudoku
             const string samplePuzzle = "900801060000000057051070000000960500015000794003000000000040920170000000080106005";
 
             var board = CreateBoard(samplePuzzle);
-
-
-            var peers = FindPeers(board.First(), board);
-            foreach (var cell in peers)
-            {
-                Console.WriteLine(cell);
-            }
 
             bool eliminate = true;
             bool ruleOut = true;
@@ -92,6 +51,39 @@ namespace sudoku
                 Console.WriteLine("Rule Out");
                 DisplayBoard(board);
             }
+        }
+
+        // assumes the board has 81 elements, and the string has 81 characters
+        static List<Cell> CreateBoard(String unsolvedBoard)
+        {
+            var board = new List<Cell>();
+            // create each cell in the board, A0, A1, A2...I8
+
+            using (var charEnumerator = unsolvedBoard.GetEnumerator())
+            {
+                foreach (var r in Alphabet)
+                {
+                    for (int c = 0; c < 9; c++)
+                    {
+                        var cell = new Cell(r, c);
+                        charEnumerator.MoveNext();
+                        int number = (int)char.GetNumericValue(charEnumerator.Current);
+                        // if the number is 0, assume the solution is unknown and default to all possible solutions
+                        if (number == 0)
+                        {
+                            cell.Solutions = new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+                        }
+                        else
+                            // assume number is the solution for the current cell
+                        {
+                            cell.Solutions.Add(number);
+                        }
+
+                        board.Add(cell);
+                    }
+                }
+            }
+            return board;
         }
 
         static List<Cell> FindPeers(Cell cell, List<Cell> board)
@@ -135,7 +127,6 @@ namespace sudoku
 
                 table.AddRow(row.ToArray());
             }
-
             table.Write();
         }
 
@@ -172,7 +163,6 @@ namespace sudoku
                     where cell.Solutions.Count > 1
                     select cell).ToList();
 
-
             foreach (var cell in multipleSolutions)
             {
                 // Iterate over all possible solutions in a cell and see if it exists in any peers.
@@ -193,6 +183,11 @@ namespace sudoku
 
         private static bool NakedTwins(List<List<Cell>> board)
         {
+            // need 
+            // list of rows
+            // list of columns
+            // list of blocks
+
             bool changesMade = false;
             // start by looking for twins
             // iterate over all the rows, columns, blocks on the board
