@@ -2,15 +2,16 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Runtime.Remoting.Channels;
+using System.Net.Sockets;
 
 namespace sudoku
 {
     class Program
     {
         // Convenience list used in generating blocks
-        static readonly List<List<char>> RowGridsList = new List<List<char>>
+        private static readonly List<List<char>> RowGridsList = new List<List<char>>
         {
             new List<char> {'A', 'B', 'C'},
             new List<char> {'D', 'E', 'F'},
@@ -18,22 +19,34 @@ namespace sudoku
         };
 
         // Convenience list used in generating blocks
-        static readonly List<List<int>> ColumnGridsList = new List<List<int>>
+        private static readonly List<List<int>> ColumnGridsList = new List<List<int>>
         {
             new List<int> {0, 1, 2},
             new List<int> {3, 4, 5},
             new List<int> {6, 7, 8}
         };
 
-        private static readonly List<char> Alphabet = new List<char> {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'};
+        private static readonly List<char> Alphabet = new List<char> { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I' };
 
         static void Main(string[] args)
         {
-            //const string samplePuzzle = "000000907000420180000705026100904000050000040000507009920108000034059000507000000";
+            const string samplePuzzle = "000000907000420180000705026100904000050000040000507009920108000034059000507000000";
             //const string samplePuzzle = "003020600900305001001806400008102900700000008006708200002609500800203009005010300";
             //const string samplePuzzle = "003020600900305001001806400008102900700000008006708200002609500800203009005010300";
             //const string samplePuzzle = "300200000000107000706030500070009080900020004010800050009040301000702000000008006";
-            const string samplePuzzle = "900801060000000057051070000000960500015000794003000000000040920170000000080106005";
+            //const string samplePuzzle = "900801060000000057051070000000960500015000794003000000000040920170000000080106005";
+
+            // simple
+            //const string samplePuzzle = "045000001230000908000090000014078030000103000080940710000080000308000052400000870";
+
+            // medium
+            //const string samplePuzzle = "010600050000540002000098400900000605200000008308000001002850000600073000070009060";
+
+            // hard
+            //const string samplePuzzle = "806020507002000400370000091000456000500103006000872000430000075005000900701040603";
+
+            //const string samplePuzzle =   "000000000000000000000000000000000000000000000000007000000000000000000000000000000";
+
 
             var board = CreateBoard(samplePuzzle);
 
@@ -53,12 +66,11 @@ namespace sudoku
                 DisplayBoard(board);
             }
 
-            var cell = board.Find(item => item.R == 'A' && item.C == 4);
-
-            //board = TrySolution(board, 'A', 4,5);
-            //DisplayBoard(board);
-            //board = TrySolution(board, 'A', 4, 4);
-            BackTrack(board);
+            Stopwatch stopWatch = new Stopwatch();
+            stopWatch.Start();
+            DisplayBoard(BackTrack(board));
+            stopWatch.Stop();
+            Console.WriteLine("Backtracking completed in {0} ms", stopWatch.Elapsed.Milliseconds);
         }
 
         // assumes the board has 81 elements, and the string has 81 characters
@@ -66,7 +78,7 @@ namespace sudoku
         {
             var board = new List<Cell>();
             // create each cell in the board, A0, A1, A2...I8
-
+            // and at the same time add the known solutions or 1..9
             using (var charEnumerator = unsolvedBoard.GetEnumerator())
             {
                 foreach (var r in Alphabet)
@@ -82,11 +94,10 @@ namespace sudoku
                             cell.Solutions = new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
                         }
                         else
-                            // assume number is the solution for the current cell
+                        // assume number is the solution for the current cell
                         {
                             cell.Solutions.Add(number);
                         }
-
                         board.Add(cell);
                     }
                 }
@@ -94,6 +105,7 @@ namespace sudoku
             return board;
         }
 
+        // find all cells in the same row, column, or block
         static List<Cell> FindPeers(Cell cell, List<Cell> board)
         {
             var rowBox = RowGridsList.Find(row => row.Contains(cell.R));
@@ -101,14 +113,14 @@ namespace sudoku
 
             var peers =
                 (from element in board
-                    where
-                        // cells in the same row or column
-                        ((element.C == cell.C || element.R == cell.R)
-                         // or cells that are in the same 3x3 box
-                         || (columnBox.Contains(element.C) && rowBox.Contains(element.R)))
-                        // and exclude the cell from its peers
-                        && element != cell
-                    select element).Distinct().ToList();
+                 where
+                     // cells in the same row or column
+                     ((element.C == cell.C || element.R == cell.R)
+                      // or cells that are in the same 3x3 box
+                      || (columnBox.Contains(element.C) && rowBox.Contains(element.R)))
+                     // and exclude the cell from its peers
+                     && element != cell
+                 select element).Distinct().ToList();
             return peers;
         }
 
@@ -119,7 +131,7 @@ namespace sudoku
 
             // split the board into a list of lists
             var rows = board
-                .Select((x, i) => new {Index = i, Value = x})
+                .Select((x, i) => new { Index = i, Value = x })
                 .GroupBy(x => x.Index / 9)
                 .Select(x => x.Select(v => v.Value).ToList())
                 .ToList();
@@ -127,12 +139,11 @@ namespace sudoku
             var table = new ConsoleTable(" ", "0", "1", "2", "3", "4", "5", "6", "7", "8");
             for (int i = 0; i < rows.Count; i++)
             {
-                var row = new ArrayList {Alphabet[i]};
+                var row = new ArrayList { Alphabet[i] };
                 foreach (var cell in rows[i])
                 {
                     row.Add(String.Join(",", cell.Solutions).PadLeft(size));
                 }
-
                 table.AddRow(row.ToArray());
             }
             table.Write();
@@ -145,8 +156,8 @@ namespace sudoku
             // find all cells with a single solution
             var singles =
                 (from cell in board
-                    where cell.Solutions.Count == 1
-                    select cell).ToList();
+                 where cell.Solutions.Count == 1
+                 select cell).ToList();
 
             foreach (var cell in singles)
             {
@@ -168,8 +179,8 @@ namespace sudoku
             // find all cells with multiple solutions
             var multipleSolutions =
                 (from cell in board
-                    where cell.Solutions.Count > 1
-                    select cell).ToList();
+                 where cell.Solutions.Count > 1
+                 select cell).ToList();
 
             foreach (var cell in multipleSolutions)
             {
@@ -189,6 +200,7 @@ namespace sudoku
             return changesMade;
         }
 
+        // TODO: Finish implementing
         private static bool NakedTwins(List<List<Cell>> board)
         {
             // need 
@@ -250,6 +262,7 @@ namespace sudoku
             return changesMade;
         }
 
+        // utility method to make a deep copy of the sudoku board
         static List<Cell> CloneBoard(List<Cell> board)
         {
             return board.Select(item => (Cell)item.Clone()).ToList();
@@ -262,9 +275,9 @@ namespace sudoku
             // and return the first value
             return
                 (from cell in board
-                    where cell.Solutions.Count >= 2
-                    orderby cell.Solutions.Count
-                    select cell).First();
+                 where cell.Solutions.Count >= 2
+                 orderby cell.Solutions.Count
+                 select cell).First();
         }
 
         static List<Cell> TrySolution(List<Cell> board, char row, int column, int solution)
@@ -280,7 +293,7 @@ namespace sudoku
             var peers = FindPeers(cell, board);
 
             // remove the solution from the peers
-            peers.ForEach( peer => peer.Solutions.Remove(solution));
+            peers.ForEach(peer => peer.Solutions.Remove(solution));
 
             // if any solutions in peers are reduced to zero, the solution is invalid
             if (peers.FindAll(item => item.Solutions.Count == 0).Count > 0)
@@ -298,7 +311,7 @@ namespace sudoku
             }
 
             // plug the solution into the cell
-            cell.Solutions = new List<int> {solution};
+            cell.Solutions = new List<int> { solution };
 
             // return the updated board
             return board;
@@ -312,35 +325,37 @@ namespace sudoku
                 return board;
             }
 
+            // find a cell with multiple solutions
             var unsolvedCell = FindUnsolvedCell(board);
 
+            // iterate over solutions in the cell and try plugging them into the board
             foreach (var candidate in unsolvedCell.Solutions)
             {
                 Console.WriteLine("Trying {0} at {1}{2}", candidate, unsolvedCell.R, unsolvedCell.C);
                 // try placing the candidate solution
-                // TrySolution will return a new board instance if the move is valid
+                // TrySolution will return a new board instance (with updated peers) if the move is valid
                 var candidateBoard = TrySolution(board, unsolvedCell.R, unsolvedCell.C, candidate);
                 if (candidateBoard != null)
                 {
                     DisplayBoard(candidateBoard);
-                    //BackTrack(candidateBoard);
-                    if (BackTrack(candidateBoard) != null)
+                    candidateBoard = BackTrack(candidateBoard);
+                    if (candidateBoard != null)
                     {
-                        return board;
+                        return candidateBoard;
                     }
                 }
             }
             return null;
         }
 
-        // Check each row, column and block that cell is in for duplicates
+        // Check each row, column and block that contains cell for duplicates
         static bool HasDuplicatesInChunk(List<Cell> board, Cell cell)
         {
             var rowSingleSolution =
                 (from element in board
-                where element.Solutions.Count == 1 &&
-                      element.R == cell.R
-                select element).ToList();
+                 where element.Solutions.Count == 1 &&
+                       element.R == cell.R
+                 select element).ToList();
 
             if (HasDuplicateSolutions(rowSingleSolution))
             {
@@ -349,21 +364,31 @@ namespace sudoku
 
             var columnSingleSolution =
                 (from element in board
-                where element.Solutions.Count == 1 &&
-                      element.C == cell.C
-                select element).ToList();
+                 where element.Solutions.Count == 1 &&
+                       element.C == cell.C
+                 select element).ToList();
 
             if (HasDuplicateSolutions(columnSingleSolution))
             {
                 return true;
             }
 
+            // compute the block that contains cell
+            var rowBox = RowGridsList.Find(row => row.Contains(cell.R));
+            var columnBox = ColumnGridsList.Find(column => column.Contains(cell.C));
 
-            //var rowBox = RowGridsList.Find(row => row.Contains(cell.R));
-            //var columnBox = ColumnGridsList.Find(column => column.Contains(cell.C));
 
-            //    // or cells that are in the same 3x3 box
-            //    || (columnBox.Contains(element.C) && rowBox.Contains(element.R)))
+            var block =
+                (from element in board
+                    where
+                        // something similar used in FindPeers
+                        (columnBox.Contains(element.C) && rowBox.Contains(element.R))
+                    select element).Where(x => x.Solutions.Count == 1).ToList();
+
+            if (HasDuplicateSolutions(block))
+            {
+                return true;
+            }
 
             return false;
         }
