@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Remoting.Channels;
 
 namespace sudoku
 {
@@ -51,6 +52,13 @@ namespace sudoku
                 Console.WriteLine("Rule Out");
                 DisplayBoard(board);
             }
+
+            var cell = board.Find(item => item.R == 'A' && item.C == 4);
+
+            //board = TrySolution(board, 'A', 4,5);
+            //DisplayBoard(board);
+            //board = TrySolution(board, 'A', 4, 4);
+            BackTrack(board);
         }
 
         // assumes the board has 81 elements, and the string has 81 characters
@@ -146,7 +154,7 @@ namespace sudoku
                 var peers = FindPeers(cell, board);
                 foreach (var peer in peers.Where(peer => peer.Solutions.Remove(cell.Solutions[0])))
                 {
-                    Console.WriteLine("\tEliminating {0} from {1},{2}", cell.Solutions[0], peer.R, peer.C);
+                    Console.WriteLine("\tEliminating {0} from {1}:{2}", cell.Solutions[0], peer.R, peer.C);
                     changesMade = true;
                 }
             }
@@ -240,6 +248,98 @@ namespace sudoku
                 }
             }
             return changesMade;
+        }
+
+        static List<Cell> CloneBoard(List<Cell> board)
+        {
+            return board.Select(item => (Cell)item.Clone()).ToList();
+        }
+
+        static Cell FindUnsolvedCell(List<Cell> board)
+        {
+            // find all cells with two or more solutions,
+            // sort by the size of solutions,
+            // and return the first value
+            return
+                (from cell in board
+                    where cell.Solutions.Count >= 2
+                    orderby cell.Solutions.Count
+                    select cell).First();
+        }
+
+        static List<Cell> TrySolution(List<Cell> board, char row, int column, int solution)
+        {
+            // make a deep copy of the board
+            board = CloneBoard(board);
+
+            // find the cell by row, column
+            // assume the cell will exist, and there will only be one cell at row, column
+            var cell = board.Find(item => item.R == row && item.C == column);
+
+            // get the peers of the cell
+            var peers = FindPeers(cell, board);
+
+            // remove the solution from the peers
+            peers.ForEach( peer => peer.Solutions.Remove(solution));
+
+            // if any solutions in peers are reduced to zero, the solution is invalid
+            if (peers.FindAll(item => item.Solutions.Count == 0).Count > 0)
+            {
+                Console.WriteLine("\t{0} at {1}{2} creates empty cells", solution, row, column);
+                return null;
+            }
+
+            // if duplicates are introduced in the peers, e.g. multiple 8s in the peers,
+            // the solution is invalid
+
+            var singleSolutions = (from peer in peers
+                                  where peer.Solutions.Count == 1
+                                  select peer).ToList();
+
+            var distinct = singleSolutions.Distinct(new SolutionsComparer()).Count();
+            var singles = singleSolutions.Count();
+            Console.WriteLine("\t\tSingles: {0}\tDistinct: {1}", singles, distinct);
+
+            if (distinct != singles)
+            {
+                Console.WriteLine("\t{0} at {1}{2} creates duplicate solutions", solution, row, column);
+                return null;
+            }
+
+            // plug the solution into the cell
+            cell.Solutions = new List<int> {solution};
+
+            // return the updated board
+            return board;
+        }
+
+        static List<Cell> BackTrack(List<Cell> board)
+        {
+            // if all the cells have one solution, assume the puzzle is solved
+            if (board.All(cell => cell.Solutions.Count == 1))
+            {
+                return board;
+            }
+
+            var unsolvedCell = FindUnsolvedCell(board);
+
+            foreach (var candidate in unsolvedCell.Solutions)
+            {
+                Console.WriteLine("Trying {0} at {1}{2}", candidate, unsolvedCell.R, unsolvedCell.C);
+                // try placing the candidate solution
+                // TrySolution will return a new board instance if the move is valid
+                var candidateBoard = TrySolution(board, unsolvedCell.R, unsolvedCell.C, candidate);
+                if (candidateBoard != null)
+                {
+                    DisplayBoard(candidateBoard);
+                    //BackTrack(candidateBoard);
+                    if (BackTrack(candidateBoard) != null)
+                    {
+                        return board;
+                    }
+                }
+            }
+            return null;
         }
     }
 }
