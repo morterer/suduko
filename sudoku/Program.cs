@@ -30,10 +30,10 @@ namespace sudoku
 
         static void Main(string[] args)
         {
-            const string samplePuzzle = "000000907000420180000705026100904000050000040000507009920108000034059000507000000";
+            //const string samplePuzzle = "000000907000420180000705026100904000050000040000507009920108000034059000507000000";
             //const string samplePuzzle = "003020600900305001001806400008102900700000008006708200002609500800203009005010300";
             //const string samplePuzzle = "003020600900305001001806400008102900700000008006708200002609500800203009005010300";
-            //const string samplePuzzle = "300200000000107000706030500070009080900020004010800050009040301000702000000008006";
+            const string samplePuzzle = "300200000000107000706030500070009080900020004010800050009040301000702000000008006";
             //const string samplePuzzle = "900801060000000057051070000000960500015000794003000000000040920170000000080106005";
 
             // simple
@@ -126,8 +126,11 @@ namespace sudoku
 
         private static void DisplayBoard(List<Cell> board)
         {
+            // TODO: refactor and clean up
+
             // assume there will be 81 (9 x 9) cells in the list
-            var size = board.Max(cell => cell.Solutions.Count);
+            // sorted by row and column
+            var maxSolutionSize = board.Max(cell => cell.Solutions.Count) + 1;
 
             // split the board into a list of lists
             var rows = board
@@ -136,17 +139,38 @@ namespace sudoku
                 .Select(x => x.Select(v => v.Value).ToList())
                 .ToList();
 
-            var table = new ConsoleTable(" ", "0", "1", "2", "3", "4", "5", "6", "7", "8");
+            // print the header with column labels
+            Console.Write("  ");
+            for (int i = 0; i < 9; i++)
+            {
+                Console.Write( i.ToString().PadLeft(maxSolutionSize));
+                if ((i + 1) % 3 == 0)
+                {
+                    Console.Write('|');
+                }
+            }
+            Console.WriteLine();
+            Console.WriteLine(new String('-', (maxSolutionSize * 9) + 5));
+
+            // print the body with row labels
             for (int i = 0; i < rows.Count; i++)
             {
-                var row = new ArrayList { Alphabet[i] };
-                foreach (var cell in rows[i])
+                Console.Write("{0}|", Alphabet[i]);
+                for (int j = 0; j < rows[i].Count; j++)
                 {
-                    row.Add(String.Join(",", cell.Solutions).PadLeft(size));
+                    Console.Write(String.Join("",rows[i][j].Solutions).PadLeft(maxSolutionSize));
+                    if ((j+1) % 3 == 0)
+                    {
+                        Console.Write('|');
+                    }
                 }
-                table.AddRow(row.ToArray());
+                Console.WriteLine();
+                if ((i + 1) % 3 == 0)
+                {
+                    Console.WriteLine(new String('-', (maxSolutionSize * 9) + 5));
+                }
             }
-            table.Write();
+            Console.WriteLine();
         }
 
         private static bool Eliminate(List<Cell> board)
