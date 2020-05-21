@@ -286,23 +286,14 @@ namespace sudoku
             if (peers.FindAll(item => item.Solutions.Count == 0).Count > 0)
             {
                 Console.WriteLine("\t{0} at {1}{2} creates empty cells", solution, row, column);
+                DisplayBoard(board);
                 return null;
             }
 
-            // if duplicates are introduced in the peers, e.g. multiple 8s in the peers,
-            // the solution is invalid
-
-            var singleSolutions = (from peer in peers
-                                  where peer.Solutions.Count == 1
-                                  select peer).ToList();
-
-            var distinct = singleSolutions.Distinct(new SolutionsComparer()).Count();
-            var singles = singleSolutions.Count();
-            Console.WriteLine("\t\tSingles: {0}\tDistinct: {1}", singles, distinct);
-
-            if (distinct != singles)
+            if (HasDuplicatesInChunk(board, cell))
             {
                 Console.WriteLine("\t{0} at {1}{2} creates duplicate solutions", solution, row, column);
+                DisplayBoard(board);
                 return null;
             }
 
@@ -340,6 +331,56 @@ namespace sudoku
                 }
             }
             return null;
+        }
+
+        // Check each row, column and block that cell is in for duplicates
+        static bool HasDuplicatesInChunk(List<Cell> board, Cell cell)
+        {
+            var rowSingleSolution =
+                (from element in board
+                where element.Solutions.Count == 1 &&
+                      element.R == cell.R
+                select element).ToList();
+
+            if (HasDuplicateSolutions(rowSingleSolution))
+            {
+                return true;
+            }
+
+            var columnSingleSolution =
+                (from element in board
+                where element.Solutions.Count == 1 &&
+                      element.C == cell.C
+                select element).ToList();
+
+            if (HasDuplicateSolutions(columnSingleSolution))
+            {
+                return true;
+            }
+
+
+            //var rowBox = RowGridsList.Find(row => row.Contains(cell.R));
+            //var columnBox = ColumnGridsList.Find(column => column.Contains(cell.C));
+
+            //    // or cells that are in the same 3x3 box
+            //    || (columnBox.Contains(element.C) && rowBox.Contains(element.R)))
+
+            return false;
+        }
+
+        static bool HasDuplicateSolutions(IList<Cell> cells)
+        {
+            var distinct = cells.Distinct(new SolutionsComparer());
+            var dups = cells.Except(distinct);
+
+            // This works but only removes one duplicate item from the list, not all
+            // duplicate items.  Notice the distinct line still has a cell with Solutions 2,8
+
+            // Original C0:7 C1:2,8 C2:6 C3:9 C4:3 C5:4 C6:5 C7:1,2 C8:2,8
+            // Distinct C0:7 C1:2,8 C2:6 C3:9 C4:3 C5:4 C6:5 C7:1,2
+            // Duplicates C8:2,8
+
+            return dups.Count() != 0;
         }
     }
 }
