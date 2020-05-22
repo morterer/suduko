@@ -33,14 +33,14 @@ namespace sudoku
             //const string samplePuzzle = "000000907000420180000705026100904000050000040000507009920108000034059000507000000";
             //const string samplePuzzle = "003020600900305001001806400008102900700000008006708200002609500800203009005010300";
             //const string samplePuzzle = "003020600900305001001806400008102900700000008006708200002609500800203009005010300";
-            const string samplePuzzle = "300200000000107000706030500070009080900020004010800050009040301000702000000008006";
+            //const string samplePuzzle = "300200000000107000706030500070009080900020004010800050009040301000702000000008006";
             //const string samplePuzzle = "900801060000000057051070000000960500015000794003000000000040920170000000080106005";
 
             // simple
             //const string samplePuzzle = "045000001230000908000090000014078030000103000080940710000080000308000052400000870";
 
             // medium
-            //const string samplePuzzle = "010600050000540002000098400900000605200000008308000001002850000600073000070009060";
+            const string samplePuzzle = "010600050000540002000098400900000605200000008308000001002850000600073000070009060";
 
             // hard
             //const string samplePuzzle = "806020507002000400370000091000456000500103006000872000430000075005000900701040603";
@@ -73,6 +73,7 @@ namespace sudoku
             Console.WriteLine("Backtracking completed in {0} ms", stopWatch.Elapsed.Milliseconds);
         }
 
+        // Creates the sudoku board and populates it with the known solutions
         // assumes the board has 81 elements, and the string has 81 characters
         static List<Cell> CreateBoard(String unsolvedBoard)
         {
@@ -128,8 +129,7 @@ namespace sudoku
         {
             // TODO: refactor and clean up
 
-            // assume there will be 81 (9 x 9) cells in the list
-            // sorted by row and column
+            // assume there will be 81 (9 x 9) cells in the list sorted by row and column
             var maxSolutionSize = board.Max(cell => cell.Solutions.Count) + 1;
 
             // split the board into a list of lists
@@ -158,7 +158,9 @@ namespace sudoku
                 Console.Write("{0}|", Alphabet[i]);
                 for (int j = 0; j < rows[i].Count; j++)
                 {
-                    Console.Write(String.Join("",rows[i][j].Solutions).PadLeft(maxSolutionSize));
+                    string text = rows[i][j].Solutions.Count == 0 ? "." : String.Join("", rows[i][j].Solutions);
+                    Console.Write(text.PadLeft(maxSolutionSize));
+
                     if ((j+1) % 3 == 0)
                     {
                         Console.Write('|');
@@ -173,6 +175,7 @@ namespace sudoku
             Console.WriteLine();
         }
 
+        // Find cells that have a single solution, and remove that solution from all peers
         private static bool Eliminate(List<Cell> board)
         {
             bool changesMade = false;
@@ -196,6 +199,8 @@ namespace sudoku
             return changesMade;
         }
 
+        // Iterate over all possible solutions in a cell and see if it exists in any peers.
+        // If it does not exist in any peers, it must be the solution for that cell
         private static bool RuleOut(List<Cell> board)
         {
             bool changesMade = false;
@@ -292,6 +297,8 @@ namespace sudoku
             return board.Select(item => (Cell)item.Clone()).ToList();
         }
 
+        // utility method to find all cells with multiple solutions
+        // sort by the count of solutions, and return the top cell
         static Cell FindUnsolvedCell(List<Cell> board)
         {
             // find all cells with two or more solutions,
@@ -304,6 +311,11 @@ namespace sudoku
                  select cell).First();
         }
 
+        // Attempt to place the solution on the board at row, column
+        // if the move is valid, a new copy of the board is returned
+        // with the solution at row, column and the change propagated
+        // to all peers.  If the move would result in a invalid board
+        // a null is returned
         static List<Cell> TrySolution(List<Cell> board, char row, int column, int solution)
         {
             // make a deep copy of the board
@@ -341,6 +353,7 @@ namespace sudoku
             return board;
         }
 
+        // recursively solve the board by trying different solutions
         static List<Cell> BackTrack(List<Cell> board)
         {
             // if all the cells have one solution, assume the puzzle is solved
@@ -401,7 +414,7 @@ namespace sudoku
             var rowBox = RowGridsList.Find(row => row.Contains(cell.R));
             var columnBox = ColumnGridsList.Find(column => column.Contains(cell.C));
 
-
+            // Can this all be done with Linq, instead of tacking the .Where on the end?
             var block =
                 (from element in board
                     where
@@ -417,6 +430,8 @@ namespace sudoku
             return false;
         }
 
+        // utility method to determine if there are duplicate solutions
+        // in a List of cells
         static bool HasDuplicateSolutions(IList<Cell> cells)
         {
             var distinct = cells.Distinct(new SolutionsComparer());
