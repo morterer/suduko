@@ -1,10 +1,7 @@
-﻿using ConsoleTables;
-using System;
-using System.Collections;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net.Sockets;
 
 namespace sudoku
 {
